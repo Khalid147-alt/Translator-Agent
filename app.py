@@ -1,13 +1,12 @@
 import streamlit as st
-from dotenv import load_dotenv
+
 import os
 import asyncio
 
 from agents import Agent, Runner, AsyncOpenAI, OpenAIChatCompletionsModel, RunConfig
 
 # Load Gemini API Key
-load_dotenv()
-gemini_api_key = os.getenv("GEMINI_API_KEY")
+gemini_api_key = st.secrets["GEMINI_API_KEY"]
 
 if not gemini_api_key:
     raise ValueError("GEMINI_API_KEY is not set in .env file.")
@@ -74,6 +73,8 @@ if st.button("Translate"):
     if text_input and target_lang:
         with st.spinner("Translating (please wait)..."):
             user_input = f"Translate to {target_lang}: {text_input}"
-            result = asyncio.run(translate_text(user_input))
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            result = loop.run_until_complete(translate_text(user_input))
             st.success("✅ Translated!")
             st.markdown(f"### 🗣️ Translated Text:\n{result.final_output}")
