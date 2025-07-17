@@ -3,7 +3,8 @@ import streamlit as st
 import os
 import asyncio
 
-from agents import Agent, Runner, AsyncOpenAI, OpenAIChatCompletionsModel, RunConfig
+from openagents import Agent, Runner, AsyncOpenAI, OpenAIChatCompletionsModel, RunConfig
+
 
 # Load Gemini API Key
 gemini_api_key = st.secrets["GEMINI_API_KEY"]
