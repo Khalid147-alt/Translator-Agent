@@ -1,8 +1,16 @@
 import streamlit as st
-import google.generativeai as genai
 from typing import Optional, Dict, Any
 import time
 import json
+
+# Handle potential import errors during deployment
+try:
+    import google.generativeai as genai
+    GENAI_AVAILABLE = True
+except ImportError as e:
+    GENAI_AVAILABLE = False
+    st.error(f"Google Generative AI library not found: {e}")
+    st.info("Please ensure 'google-generativeai' is installed. Run: pip install google-generativeai")
 
 # Page configuration
 st.set_page_config(
@@ -92,10 +100,19 @@ class TranslatorAgent:
     def setup_api(self):
         """Initialize Gemini API client with proper error handling"""
         try:
+            if not GENAI_AVAILABLE:
+                st.error("Google Generative AI library is not available. Please check your installation.")
+                return
+                
             # Gemini setup
             if "GEMINI_API_KEY" in st.secrets:
                 genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
-                self.gemini_model = genai.GenerativeModel('gemini-2.0-flash-exp')
+                # Try to initialize with gemini-2.0-flash-exp, fallback to gemini-pro if needed
+                try:
+                    self.gemini_model = genai.GenerativeModel('gemini-2.0-flash-exp')
+                except Exception as model_error:
+                    st.warning("Gemini 2.0 Flash not available, using Gemini Pro instead")
+                    self.gemini_model = genai.GenerativeModel('gemini-pro')
             else:
                 st.error("GEMINI_API_KEY not found in secrets.toml")
                 
@@ -144,6 +161,12 @@ class TranslatorAgent:
 
 def main():
     """Main application function"""
+    
+    # Check if required libraries are available
+    if not GENAI_AVAILABLE:
+        st.error("❌ Google Generative AI library is not installed!")
+        st.info("Please add 'google-generativeai' to your requirements.txt file")
+        st.stop()
     
     # Initialize translator agent
     if 'translator' not in st.session_state:
