@@ -1,81 +1,42 @@
 import streamlit as st
-
+from agents import Agent, Runner
 import os
-import asyncio
 
-from openagents import Agent, Runner, AsyncOpenAI, OpenAIChatCompletionsModel, RunConfig
-
-
-# Load Gemini API Key
+# Load the Gemini API key from secrets
 gemini_api_key = st.secrets["GEMINI_API_KEY"]
+os.environ["GEMINI_API_KEY"] = gemini_api_key
 
-if not gemini_api_key:
-    raise ValueError("GEMINI_API_KEY is not set in .env file.")
-
-# Setup Gemini-compatible OpenAI client
-external_client = AsyncOpenAI(
-    api_key=gemini_api_key,
-    base_url="https://generativelanguage.googleapis.com/v1beta/openai/",
-)
-
-# Model setup
-model = OpenAIChatCompletionsModel(
-    model="gemini-2.0-flash", 
-    openai_client=external_client
-)
-
-# Run configuration
-config = RunConfig(
-    model=model,
-    model_provider=external_client,
-    tracing_disabled=True
-)
-
-# Define the Translator Agent
-translator = Agent(
+# Create the translator agent using OpenAI Agents SDK with Gemini model via LiteLLM
+translator_agent = Agent(
     name="Translator Agent",
-    instructions="""You are a professional translator.
-Translate the given text into the target language mentioned in this format:
-Translate to <language>: <text>"""
+    instructions="You are a translator. Translate the given text from English to the specified language.",
+    model="gemni-2.0-flash",
 )
 
 # Streamlit UI
-st.set_page_config(page_title="Translator Agent")
-st.markdown(
-    """
-    <style>
-        body {
-            background-color: #f5f0f2; /* light blue-gray */
-        }
+st.title("Translator Agent")
+st.write("Enter text in English and select a target language to get your translation.")
 
-        .stApp {
-            background-color: #f2f9f1;
-        }
-
-        /* Optional: Customize text colors */
-        h1, h2, h3, h4, h5, h6, p {
-            color: #003366; /* deep blue text */
-        }
-    </style>
-    """,
-    unsafe_allow_html=True
+# Input components
+input_text = st.text_area("Text to translate:", height=100, placeholder="Type your English text here...")
+target_language = st.selectbox(
+    "Target language:",
+    ["French", "Spanish", "German", "Italian", "Japanese", "Urdu"],
+    help="Choose the language to translate into"
 )
 
-st.title("🌍 Translator Agent ")
-
-text_input = st.text_area("Enter text to translate:")
-target_lang = st.selectbox("Translate to:", ["Urdu", "French", "Arabic", "Chinese", "Spanish", "Sindhi"])
-
-
-async def translate_text(user_input):
-    return await Runner.run(translator, input=user_input, run_config=config)
-
-if st.button("Translate"):
-    if text_input and target_lang:
-        with st.spinner("Translating (please wait)..."):
-            user_input = f"Translate to {target_lang}: {text_input}"
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-            result = loop.run_until_complete(translate_text(user_input))
-            st.success("✅ Translated!")
-            st.markdown(f"### 🗣️ Translated Text:\n{result.final_output}")
+# Translate button and logic
+if st.button("Translate", key="translate_button"):
+    if input_text.strip() and target_language:
+        prompt = f"Translate to {target_language}: {input_text}"
+        with st.spinner("Translating..."):
+            try:
+                result = Runner.run_sync(translator_agent, prompt)
+                translated_text = result.final_output
+                st.success("Translation completed!")
+                st.write("Translated text:")
+                st.text_area("", value=translated_text, height=100, disabled=True, key="output")
+            except Exception as e:
+                st.error(f"An error occurred: {str(e)}")
+    else:
+        st.error("Please enter text and select a target language.")

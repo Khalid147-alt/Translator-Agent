@@ -1,4 +1,2 @@
 streamlit
-python-dotenv
-openai
-openagents
+openai-agents
